@@ -5,7 +5,7 @@ const siteMetadata = {
   headerTitle: 'chipmunks',
   description: '',
   language: 'ko',
-  theme: 'system', // system, dark or light
+  theme: 'dark', // system, dark or light
   siteUrl: 'https://chipmunks.dev',
   siteRepo: 'https://github.com/ekfkawl/blog',
   siteLogo: `${process.env.BASE_PATH || ''}/static/images/logo.png`,
@@ -60,19 +60,19 @@ const siteMetadata = {
     // Select a provider and use the environment variables associated to it
     // https://vercel.com/docs/environment-variables
     provider: 'giscus', // supported providers: giscus, utterances, disqus
-      giscusConfig: {
-          repo: 'ekfkawl/blog-comments',
-          repositoryId: 'R_kgDORcX9wg',
-          category: 'Announcements',
-          categoryId: 'DIC_kwDORcX9ws4C3hWI',
-          mapping: 'pathname',
-          reactions: '1',
-          metadata: '0',
-          theme: 'light',
-          darkTheme: 'transparent_dark',
-          themeURL: '',
-          lang: 'ko',
-      },
+    giscusConfig: {
+      repo: 'ekfkawl/blog-comments',
+      repositoryId: 'R_kgDORcX9wg',
+      category: 'Announcements',
+      categoryId: 'DIC_kwDORcX9ws4C3hWI',
+      mapping: 'pathname',
+      reactions: '1',
+      metadata: '0',
+      theme: 'transparent_dark',
+      darkTheme: 'transparent_dark',
+      themeURL: '',
+      lang: 'ko',
+    },
   },
   search: {
     provider: 'kbar', // kbar or algolia

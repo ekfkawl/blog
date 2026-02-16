@@ -1,9 +1,15 @@
+'use client'
+
 import NextImage, { ImageProps } from 'next/image'
+import Zoom from 'react-medium-image-zoom'
+import 'react-medium-image-zoom/dist/styles.css'
 
-const basePath = process.env.BASE_PATH
-
-const Image = ({ src, ...rest }: ImageProps) => (
-  <NextImage src={`${basePath || ''}${src}`} {...rest} />
-)
+const Image = ({ ...rest }: ImageProps) => {
+  return (
+    <Zoom>
+      <NextImage {...rest} />
+    </Zoom>
+  )
+}
 
 export default Image

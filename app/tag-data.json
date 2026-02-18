@@ -1,4 +1,7 @@
 {
+  "project": 1,
+  "architecture": 1,
+  "troubleshooting": 1,
   "next-js": 6,
   "tailwind": 3,
   "guide": 5,

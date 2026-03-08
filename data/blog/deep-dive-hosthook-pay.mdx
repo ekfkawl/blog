@@ -1,0 +1,212 @@
+---
+title: 'Hosthook-pay 프로젝트 회고'
+date: '2026-02-10'
+lastmod: '2026-02-10'
+tags: ['project', 'architecture', 'troubleshooting', 'payment']
+draft: false
+summary: 'Phone Link 후킹을 통해 모바일 입금 알림을 결제 이벤트로 처리한 프로토타입의 설계와 회고록입니다.'
+images: ['/static/images/kakaoscan-thumbnail.jpg']
+---
+
+## 목차
+<TOCInline toc={props.toc} exclude="목차" fromHeading={2} toHeading={3} />
+
+## 프로젝트 소개
+> 은행 입금 SMS를 사람이 수동으로 확인하지 않고도, 결제 완료 이벤트로 바꿀 수는 없을까?
+
+HostHook Pay는 Microsoft Phone Link 프로세스를 후킹해 모바일에서 발생한 은행 입출금 알림을 Windows에서 실시간으로 수집하고,
+이를 Redis Pub/Sub 메시지로 전달해 Spring Boot 서버가 자동으로 주문 결제 상태를 업데이트하도록 만든 프로토타입입니다.
+
+이 프로젝트에서는 `입금 내역을 주기적으로 조회하는 방식` 대신, `입금 알림이 발생하는 순간 자체를 이벤트로 처리하는 방식`을 선택했습니다.
+휴대폰에 도착한 SMS가 Phone Link를 통해 Windows로 전달되는 순간 즉시 서버로 전송하여 실시간 결제 처리가 가능하도록 하였습니다.
+
+* [github repository](https://github.com/ekfkawl/hosthook-pay)
+
+---
+
+## 아키텍처
+💡 이미지를 클릭하시면 확대 됩니다.
+
+#### 애플리케이션 아키텍처
+![hosthook-pay-diagram-app](/static/images/hosthook-pay-diagram-app.jpg)
+
+### 시스템 구성 및 기술 도입 배경
+> DLL Injection - 외부 프로세스 안으로 진입
+
+모바일 알림은 서버 프로세스가 직접 읽을 수 없고, Phone Link 내부에서 처리되는 이벤트를 외부에서 접근할 수 있는 공식 API도 없었습니다.
+그래서 Phone Link 호스트 프로세스에 `HostHook.dll`을 주입하여 실제 알림 처리 루틴을 직접 후킹해야 했습니다.
+
+> AOB Scan + Inline Hooking - 고정 오프셋에 의존하지 않는 후킹 지점 자동 탐색
+
+내부 알림 처리 함수는 공개된 심볼이 아니고, 애플리케이션 버전이 바뀌면 메모리 주소가 변동됩니다.
+`Windows.Web.dll`의 PAGE_EXECUTE_READ 구간을 대상으로 AOB(Array of Bytes) 패턴 스캔을 수행해 `combase.WindowsGetStringRawBuffer` 함수 호출 지점을 찾고 후킹하도록 처리하였습니다.
+`combase.WindowsGetStringRawBuffer` 함수는 내부 문자열의 raw buffer를 반환하는 저수준 함수이고, 해당 호출 지점에서 알림 JSON을 포함한 다양한 문자열이 함께 흘러가는 것을 확인했습니다.
+
+> Redis Pub/Sub - OS 이벤트를 비즈니스 로직과 분리하기 위한 경계
+
+`HostHook.dll`이 해야 할 일은 `알림을 감지하고 전달하는 것`까지였습니다. 이 레이어가 주문 테이블 구조, 은행별 SMS 포맷, 결제 상태 전이까지 알게 되면 결합도가 너무 높아집니다.
+그래서 알림 내용을 Redis 토픽에 발행하고, 서버는 이를 구독한 뒤 파싱과 주문 매칭만 담당하도록 나눴습니다.
+
+---
+
+## 트러블슈팅
+### 노이즈 제거를 위한 필터링: dedupe, 최신성, title/package 필터
+
+#### 문제 상황 - 동일 알림, 지연 알림, 무관한 알림까지 모두 들어올 수 있었던 구조
+
+`combase.WindowsGetStringRawBuffer` 함수를 후킹한다고 해서 모든 메시지가 결제 이벤트로 쓸 수 있는 것은 아니였습니다.
+범용 적인 함수이다보니 리턴 값에는 알림 처리와 무관한 일반 문자열도 함께 섞여 들어오는 경우가 많았습니다.
+
+- 은행 입금과 무관한 일반 알림
+- 같은 알림이 중복 전달되는 경우
+- 예전에 발생한 오래된 알림이 뒤늦게 들어오는 경우
+
+이런 노이즈를 그대로 서버에 보내면, 중복 결제 처리나 오탐이 발생할 가능성이 높아집니다.
+
+#### 해결 과정
+디버깅을 통해 관찰해 보니 Phone Link 알림 문자열은 공통적으로 JSON prefix를 가지고 있었습니다.
+특히 알림 객체는 `{"key":"` 형태로 시작했기 때문에, 역직렬화 이전에 이 prefix를 먼저 검사하는 빠른 1차 필터를 두었습니다.
+
+이후 검증 로직은 다음 세 단계로 이루어집니다.
+1. **dedupe**
+
+   알림 key를 메모리 딕셔너리에 보관해 중복 알림 요청을 방지했습니다.
+
+2. **최신성 검사**
+
+   알림 timestamp가 최근 180초 이내인지 확인해, 과거 알림이나 지연된 알림을 제외했습니다.
+
+3. **title/package 필터**
+
+   설정 파일의 `TitleFilter`, `PackageFilter`에 정확히 일치하는 알림만 허용했습니다.
+
+전체 흐름은 다음과 같습니다.
+
+1. 원래 `WindowsGetStringRawBuffer`를 먼저 호출해 기존 동작을 보장
+2. 반환된 PWideChar 버퍼가 `{"key":"` prefix로 시작하는지 확인
+3. prefix가 맞는 경우에만 TNotification으로 역직렬화
+4. 이후 dedupe / 최신성 / title-package 필터를 거쳐 최종 발행
+```pascal:Hook.pas
+function HijacNotifications(Unused1, Unused2: Pointer): Pointer;
+var
+  Res: Pointer;
+  pBuffer: PWideChar;
+  Noti: TNotification;
+begin
+  Res := pOrigWindowsGetStringRawBuffer(Unused1, Unused2);
+
+  pBuffer := Res;
+  try
+    if not CompareMem(pBuffer, Ptr(UInt64(KEY_TAG)), SizeOf(KEY_TAG)) then
+      Exit(Res);
+
+    Noti := TJson.JsonToObject<TNotification>(pBuffer);
+    try
+      if not IsValidNotification(Noti) then
+        Exit(Res);
+
+      Redis.Publish(TOPIC, pBuffer);
+    finally
+      Noti.Free;
+    end;
+  except
+    on E: Exception do
+      Writeln('Error: %s', [E.ClassName + ' - ' + E.Message]);
+  end;
+
+  Result := Res;
+end;
+```
+이로 인해, 결제 처리에 쓸 수 있는 알림만 필터링해서 보내는 이벤트 소스로 동작할 수 있었습니다.
+
+---
+
+### Redis Pub/Sub으로 OS 이벤트를 결제 이벤트로 처리
+#### 문제 상황 - 후킹 모듈이 도메인 로직까지 알면 결합도가 너무 높아지는 문제
+
+Windows 후킹 모듈은 운영체제와 앱 내부 동작을 다루는 저수준 코드이고, 주문 결제 처리는 데이터베이스와 비즈니스 규칙을 다루는 고수준 로직입니다. 이 둘이 직접 붙어버리면 변경 영향이 너무 커집니다.
+
+예를 들어 은행 SMS 포맷이 바뀌거나 주문 매칭 규칙이 바뀌더라도, DLL을 다시 수정하고 배포해야 하는 구조는 유지보수 관점에서 좋지 않습니다.
+
+#### 해결 과정
+두 레이어 간 이벤트 경계를 Redis Pub/Sub에 두었습니다. 후킹 모듈은 필터링된 알림 JSON만 Redis 토픽으로 발행하고, Spring Boot 서버는 이 토픽을 구독합니다.
+
+이후 서버 쪽에서는 아래와 같은 흐름으로 처리합니다.
+1. 수신한 JSON을 `Notification` 객체로 파싱
+```java:SmsSubscriber
+public class SmsSubscriber {
+    private final PaymentService paymentService;
+
+    public void onMessage(String message) {
+        Notification noti = Notification.parseNotification(message);
+        if (noti == null) {
+            return;
+        }
+
+        try {
+            TransactionInfo ti = IBKSmsParser.parse(noti.getText());
+            paymentService.processDeposit(ti);
+        } catch (IllegalArgumentException e) {
+            System.err.println("SMS 포맷 오류: " + e.getMessage());
+        }
+    }
+}
+```
+2. 은행 SMS 본문을 전용 parser로 해석
+```java:IBKSmsParser
+public class IBKSmsParser {
+    private static final Pattern IBK_PATTERN = Pattern.compile(
+              "(?<date>\\d{4}/\\d{2}/\\d{2} \\d{2}:\\d{2})\\R" +
+                    "입금\\s*(?<amount>[\\d,]+)원\\R" +
+                    "잔액 [\\d,]+원\\R" +
+                    "(?<name>.+)\\R" +
+                    "(?<account>[\\d*]+)",
+            Pattern.MULTILINE
+    );
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
+
+    public static TransactionInfo parse(String sms) {
+        Matcher m = IBK_PATTERN.matcher(sms);
+        if (!m.find()) {
+            throw new IllegalArgumentException("지원하지 않는 IBK SMS 포맷입니다.");
+        }
+
+        LocalDateTime dateTime = LocalDateTime.parse(m.group("date"), DATE_FMT);
+        BigDecimal amount = new BigDecimal(m.group("amount").replace(",", ""));
+        String name = m.group("name");
+        String account = m.group("account");
+
+        return new TransactionInfo(dateTime, amount, name, account);
+    }
+}
+```
+
+3. `입금자명 + 금액` 기준으로 가장 최근 `PENDING` 주문 조회
+4. 매칭된 주문 상태를 `COMPLETED`로 전환
+```java:PaymentService
+public class PaymentService {
+    private final OrderRepository orderRepository;
+
+    protected Order matchPendingOrder(TransactionInfo ti) {
+        List<Order> list = orderRepository.findPendingOrders(
+                Order.Status.PENDING,
+                ti.getSenderName(),
+                ti.getAmount().intValue(),
+                PageRequest.of(0, 1)
+        );
+
+        return list.stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("매칭 가능한 PENDING 주문이 없습니다."));
+    }
+
+    @Transactional
+    public void processDeposit(TransactionInfo ti) {
+        Order order = matchPendingOrder(ti);
+        order.setStatus(Order.Status.COMPLETED);
+        log.info("결제 처리 완료: {}", ti.toString());
+    }
+}
+```
+이와 같은 설계로 Windows 쪽은 알림 수집과 전달에만 집중하고, 서버 쪽은 비즈니스 규칙과 데이터 정합성에만 집중할 수 있었습니다.

@@ -12,6 +12,12 @@ const projectsData: Project[] = [
     imgSrc: '/static/images/kakaoscan-thumbnail.jpg',
     href: '/blog/deep-dive-kakaoscan',
   },
+  {
+    title: 'Hosthook-pay',
+    description: `Phone Link 호스트 프로세스를 후킹하여 휴대폰 입출금 알림을 가로채고, 무통장·계좌이체 입금을 자동으로 확인 가능하도록 도와주는 라이브러리입니다.`,
+    imgSrc: '/static/images/hosthook-pay-thumbnail.jpg',
+    href: '/blog/deep-dive-hosthook-pay',
+  },
 ]
 
 export default projectsData

@@ -29,13 +29,13 @@ images: ['/static/images/kakaoscan-thumbnail.jpg']
 💡 이미지를 클릭하시면 확대 됩니다.
 
 #### 애플리케이션 아키텍처
-![kakaoscan-diagram](/static/images/kakaoscan-diagram-app.jpg)
+![kakaoscan-diagram-app](/static/images/kakaoscan-diagram-app.jpg)
 
 #### 인프라 아키텍처
-![kakaoscan-diagram](/static/images/kakaoscan-diagram-infra.jpg)
+![kakaoscan-diagram-infra](/static/images/kakaoscan-diagram-infra.jpg)
 
 #### DB 다이어그램
-![kakaoscan-diagram](/static/images/kakaoscan-diagram-db.jpg)
+![kakaoscan-diagram-db](/static/images/kakaoscan-diagram-db.jpg)
 
 ### 시스템 구성 및 기술 도입 배경
 > Redis (Pub/Sub) - 오버엔지니어링 방지 및 인프라 리소스 최적화
@@ -355,7 +355,7 @@ p95 기준으로 응답시간이 60ms대에서 40ms 초반대로 내려오면서
 3. 필터링된 알림 JSON을 Redis Pub/Sub 토픽으로 즉시 발행
 4. 서버가 Redis 구독 후 SMS 본문을 파싱해 대응되는 PENDING 주문을 COMPLETED로 변경
 
-구체적인 트러블슈팅 과정은 [hosthook-pay 회고]()에 별도로 정리해 두었습니다.
+구체적인 트러블슈팅 과정은 [hosthook-pay 회고](/blog/deep-dive-hosthook-pay)에 별도로 정리해 두었습니다.
 
 #### 환경적 문제
 지금은 이 방식 대신에 외부 SaaS API를 활용해서 WebHook 기반으로 결제를 자동 처리하고 있습니다.
@@ -379,11 +379,12 @@ p95 기준으로 응답시간이 60ms대에서 40ms 초반대로 내려오면서
     @Transactional
     public void approve(Long productTransactionId) {
         processProductTransaction(productTransactionId, (processor, transaction) -> {
+            // 상태 변경
             processor.approve(transaction);
             transaction.approve();
 
+            // 부수효과 이벤트
             int newBalance = transaction.getWallet().getBalance();
-
             events.publishEvent(new ApprovalSideEffectsEvent(
                     transaction.getUser().getEmail(),
                     newBalance,
@@ -422,7 +423,7 @@ p95 기준으로 응답시간이 60ms대에서 40ms 초반대로 내려오면서
     }
     ```
 
-개발자 도구의 Network 탭에서 측정 결과, 응답시간은 약 3,000ms → 150ms 이내로 개선되었습니다.
+개발자 도구의 Network 탭에서 측정 결과, 응답시간은 `약 3,000ms → 150ms 이내`로 개선되었습니다.
 
 ---
 

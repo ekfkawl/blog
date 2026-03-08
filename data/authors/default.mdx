@@ -39,11 +39,12 @@ export const Badge = ({ children }) => (
 
 ### 🚀 Projects
 ### 카카오톡 프로필 조회 서비스
-https://github.com/ekfkawl/kakaoscan
+[작성 글: 프로젝트 회고](/blog/deep-dive-kakaoscan/)
 
 사용자의 프로필 조회 요청을 실시간으로 접수하고, 외부 워커에서 프로필 조회 작업을 처리한 뒤 결과를 WebSocket으로 전달하는 시스템을 설계 및 구현했습니다.
 
 <div style={{ marginTop: '-0.7rem', marginBottom: '1rem' }}> <Badge>#Java</Badge> <Badge>#Spring Boot</Badge> <Badge>#WebSocket</Badge> <Badge>#Redis</Badge> <Badge>#MySQL</Badge> <Badge>#Delphi</Badge> <Badge>#x86 Assembly</Badge> </div>
+- MAU 약 4,000명·누적 가입자 30,000+명 규모의 웹 서비스입니다.
 - 서버–외부 워커 연동을 이벤트 아키텍처(Pub/Sub)로 설계해 결합도를 낮추고, 기능 추가/변경 시 영향 범위를 최소화했습니다.
 - 사용자 단위 분산 락을 적용하고, 락 해제 시점을 트랜잭션 완료 이후로 동기화해 커밋 전 데이터 노출로 인한 레이스 컨디션을 방지했습니다.
 - WebSocket 핫패스 구간에 Cache-aside 패턴을 적용해 p95 응답시간을 60.2ms → 41.7ms로 약 31% 단축하여 병목을 줄였습니다.
@@ -52,7 +53,7 @@ https://github.com/ekfkawl/kakaoscan
 - 운영 환경에서 장애(UnknownHostException) 발생 당시 애플리케이션 레벨의 문제가 아닌 DNS 문제로 원인을 좁혀 nslookup으로 확인하고, /etc/resolv.conf를 공용 DNS로 전환해 서비스 연결을 복구하는 방식으로 장애를 대응하였습니다.
 
 ### 입출금 메세지 수신 기반 결제 자동화
-https://github.com/ekfkawl/hosthook-pay
+[작성 글: 프로젝트 회고](/blog/deep-dive-hosthook-pay/)
 
 모바일에서 발생한 은행 입출금 알림을 Windows 환경에서 실시간으로 수신/필터링해 메세지 토픽으로 전달하고, 서버는 이를 구독해 결제 확인/완료 처리를 자동화하는 시스템을 구현했습니다.
 
@@ -62,7 +63,7 @@ https://github.com/ekfkawl/hosthook-pay
 - 입금 알림을 Pub/Sub 이벤트로 표준화해 전달하도록 구성하여, 서버는 구독/파싱 후 주문 결제 처리에만 집중할 수 있도록 설계했습니다.
 
 ### CVE-2024-30804 PoC (ASUS 커널 드라이버 LPE 취약점 재현)
-https://github.com/ekfkawl/CVE-2024-30804
+[작성 글: 프로젝트 회고](/blog/deep-dive-cve-2024-30804/)
 
 서명된 ASUS 드라이버(AsInsHelp64.sys)의 물리 메모리 매핑 IOCTL을 악용할 수 있는 취약점을 분석하고, 커널 구조체 조작을 통해 로컬 권한 상승이 가능한 시나리오를 PoC로 재현했습니다.
 

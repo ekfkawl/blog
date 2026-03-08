@@ -39,7 +39,9 @@ export const Badge = ({ children }) => (
 
 ### 🚀 Projects
 ### 카카오톡 프로필 조회 서비스
-[작성 글: 프로젝트 회고](/blog/deep-dive-kakaoscan/)
+<div className="text-[0.85rem] text-gray-500 dark:text-gray-400 mt-[-0.5rem] mb-4">
+  2024.02 - 현재 <span className="mx-1">|</span> <a href="/blog/deep-dive-kakaoscan/" className="text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors">프로젝트 회고</a>
+</div>
 
 사용자의 프로필 조회 요청을 실시간으로 접수하고, 외부 워커에서 프로필 조회 작업을 처리한 뒤 결과를 WebSocket으로 전달하는 시스템을 설계 및 구현했습니다.
 
@@ -53,7 +55,9 @@ export const Badge = ({ children }) => (
 - 운영 환경에서 장애(UnknownHostException) 발생 당시 애플리케이션 레벨의 문제가 아닌 DNS 문제로 원인을 좁혀 nslookup으로 확인하고, /etc/resolv.conf를 공용 DNS로 전환해 서비스 연결을 복구하는 방식으로 장애를 대응하였습니다.
 
 ### 입출금 메세지 수신 기반 결제 자동화
-[작성 글: 프로젝트 회고](/blog/deep-dive-hosthook-pay/)
+<div className="text-[0.85rem] text-gray-500 dark:text-gray-400 mt-[-0.5rem] mb-4">
+  2025.06 - 2025.08 <span className="mx-1">|</span> <a href="/blog/deep-dive-hosthook-pay/" className="text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors">프로젝트 회고</a>
+</div>
 
 모바일에서 발생한 은행 입출금 알림을 Windows 환경에서 실시간으로 수신/필터링해 메세지 토픽으로 전달하고, 서버는 이를 구독해 결제 확인/완료 처리를 자동화하는 시스템을 구현했습니다.
 
@@ -63,7 +67,9 @@ export const Badge = ({ children }) => (
 - 입금 알림을 Pub/Sub 이벤트로 표준화해 전달하도록 구성하여, 서버는 구독/파싱 후 주문 결제 처리에만 집중할 수 있도록 설계했습니다.
 
 ### CVE-2024-30804 PoC (ASUS 커널 드라이버 LPE 취약점 재현)
-[작성 글: 프로젝트 회고](/blog/deep-dive-cve-2024-30804/)
+<div className="text-[0.85rem] text-gray-500 dark:text-gray-400 mt-[-0.5rem] mb-4">
+  2025.12 - 2025.12 <span className="mx-1">|</span> <a href="/blog/deep-dive-cve-2024-30804/" className="text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors">프로젝트 회고</a>
+</div>
 
 서명된 ASUS 드라이버(AsInsHelp64.sys)의 물리 메모리 매핑 IOCTL을 악용할 수 있는 취약점을 분석하고, 커널 구조체 조작을 통해 로컬 권한 상승이 가능한 시나리오를 PoC로 재현했습니다.
 

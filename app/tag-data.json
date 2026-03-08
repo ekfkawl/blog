@@ -1,5 +1,7 @@
 {
-  "project": 2,
-  "architecture": 2,
-  "troubleshooting": 2
+  "project": 3,
+  "architecture": 3,
+  "troubleshooting": 3,
+  "payment": 1,
+  "kernel": 1
 }

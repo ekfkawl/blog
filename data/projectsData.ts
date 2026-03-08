@@ -18,6 +18,12 @@ const projectsData: Project[] = [
     imgSrc: '/static/images/hosthook-pay-thumbnail.jpg',
     href: '/blog/deep-dive-hosthook-pay',
   },
+  {
+    title: 'CVE-2024-30804 PoC',
+    description: `서명된 ASUS 드라이버의 취약점을 이용한 로컬 권한 상승(LPE)에 대한 개념 증명(PoC) 입니다.`,
+    imgSrc: '/static/images/CVE-2024-30804-thumbnail.png',
+    href: '/blog/deep-dive-cve-2024-30804',
+  },
 ]
 
 export default projectsData
